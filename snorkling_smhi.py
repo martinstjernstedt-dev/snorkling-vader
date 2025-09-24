@@ -74,16 +74,20 @@ def main():
     data = hamta_vader()
     forecasts = forecast_19(data, dagar=3)
 
-    for f in forecasts:
+    for f in forecast:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
-vind_riktning = vind_pil(f['wd'])
-msg = (f"Väder kl 19:00 den {f['datum']} – {status} | "
-       f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {vind_riktning}, Byar: {f['gust']} m/s, "
-       f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km, "
-       f"Molnighet: {f['tcc']}/8")
+        moln = f"{f['cloud']}% molnighet" if f['cloud'] is not None else "okänd molnighet"
+        riktning = wind_arrow(f["wd"]) if f["wd"] is not None else "?"
+        
+        msg = (
+            f"Väder kl {f['time']} den {f['datum']} – {status}\n"
+            f"🌡 Temp: {f['t']}°C | 🌬 Vind: {f['ws']} m/s ({riktning}) | "
+            f"🌊 Våg: {f['wvh']} m | 💨 Byvind: {f['gust']} m/s | ☁ {moln}"
+        )
         print(msg)
 
 if __name__ == "__main__":
     main()
+
 
 
