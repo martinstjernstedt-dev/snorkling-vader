@@ -2,7 +2,7 @@ import requests
 import datetime
 import pytz
 
-# Skaftö
+# Koordinater för Skaftö
 LAT = 58.316
 LON = 11.468
 
@@ -11,7 +11,7 @@ HEADERS = {
     "User-Agent": "SnorklingApp/1.0"
 }
 
-# Vindriktning som pil
+# Vind- och vågpilar
 def wind_direction_arrow(deg):
     arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
     ix = round(deg / 45) % 8
@@ -24,7 +24,7 @@ def snorkling_ok(t):
     except (TypeError, ValueError):
         return False
 
-# Hjälpfunktion för att ersätta None med "?"
+# Hjälp: ersätt None med "?"
 def safe(val):
     return val if val is not None else "?"
 
@@ -41,7 +41,11 @@ def main():
     prognoser = []
 
     for t in data["properties"]["timeseries"]:
-        valid_time = datetime.datetime.fromisoformat(t["time"]).astimezone(tz)
+        # Fix: hantera Z (UTC)
+        valid_time = datetime.datetime.fromisoformat(
+            t["time"].replace("Z", "+00:00")
+        ).astimezone(tz)
+
         if valid_time.hour == 19 and len(prognoser) < 3:
             inst = t["data"]["instant"]["details"]
             waves = t["data"].get("waves", {}).get("details", {})
