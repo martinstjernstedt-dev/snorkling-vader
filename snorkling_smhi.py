@@ -2,7 +2,7 @@ import requests
 import datetime
 import pytz
 
-# Koordinater för Stockevik (för SMHI väder)
+# Koordinater för Stockevik (SMHI)
 LAT = 57.959961
 LON = 11.547085
 
@@ -13,9 +13,8 @@ def hamta_vader():
     r.raise_for_status()
     return r.json()
 
-# HaV badplatsdata för Stockevik (endast en badplats)
+# HaV badplatsdata för Stockevik
 def hamta_stockevik():
-    # Exakt ID för Stockevik badplats
     url = "https://badplatsen.havochvatten.se/badplatsen/api/detail?id=SE0A21484000000552"
     r = requests.get(url)
     r.raise_for_status()
@@ -24,8 +23,11 @@ def hamta_stockevik():
 # Vindriktning som pil
 def wind_direction_arrow(deg):
     arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
-    ix = round(deg / 45) % 8
-    return arrows[ix]
+    try:
+        ix = round(float(deg) / 45) % 8
+        return arrows[ix]
+    except (TypeError, ValueError):
+        return "?"
 
 # Snorklingregler
 def snorkling_ok(f):
@@ -34,7 +36,19 @@ def snorkling_ok(f):
     except (TypeError, ValueError):
         return False
 
-# Hjälpfunktion som ersätter None med "?"
+# Robust hämtning av fält från HaV-data
+def safe_get_badplats(data, key):
+    if key in data:
+        return data[key]
+    if "properties" in data and key in data["properties"]:
+        return data["properties"][key]
+    if "observations" in data:
+        for obs in data["observations"]:
+            if key in obs:
+                return obs[key]
+    return "?"
+
+# Hjälpfunktion för SMHI-parametrar
 def safe_get(params, key):
     value = params.get(key)
     return value if value is not None else "?"
@@ -43,10 +57,10 @@ def main():
     tz = pytz.timezone("Europe/Stockholm")
 
     vader_data = hamta_vader()
-    bad_data = hamta_stockevik()  # Ett dict för Stockevik
+    bad_data = hamta_stockevik()
 
-    sst = safe_get(bad_data, "vattentemperatur")
-    water_quality = safe_get(bad_data, "badvattenklass")
+    sst = safe_get_badplats(bad_data, "vattentemperatur")
+    water_quality = safe_get_badplats(bad_data, "badvattenklass")
 
     prognoser = []
 
@@ -68,7 +82,7 @@ def main():
 
     for f in prognoser:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
-        wind_arrow = wind_direction_arrow(f["wd"]) if f["wd"] != "?" else "?"
+        wind_arrow = wind_direction_arrow(f["wd"])
         msg = (
             f"Väder kl 19:00 den {f['datum']} – {status}\n"
             f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {wind_arrow}, Byar: {f['gust']} m/s\n"
