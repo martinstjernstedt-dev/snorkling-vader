@@ -12,6 +12,27 @@ def hamta_vader():
     r.raise_for_status()
     return r.json()
 
+def vind_pil(grader):
+    if grader is None:
+        return "?"
+    grader = grader % 360  # säkerställ 0-359
+    if 337.5 <= grader or grader < 22.5:
+        return "↑"
+    elif 22.5 <= grader < 67.5:
+        return "↗"
+    elif 67.5 <= grader < 112.5:
+        return "→"
+    elif 112.5 <= grader < 157.5:
+        return "↘"
+    elif 157.5 <= grader < 202.5:
+        return "↓"
+    elif 202.5 <= grader < 247.5:
+        return "↙"
+    elif 247.5 <= grader < 292.5:
+        return "←"
+    elif 292.5 <= grader < 337.5:
+        return "↖"
+
 def forecast_19(data, dagar=3):
     """Hämtar forecast kl 19 svensk tid för kommande 'dagar'"""
     stockholm = pytz.timezone("Europe/Stockholm")
@@ -55,12 +76,14 @@ def main():
 
     for f in forecasts:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
-        msg = (f"Väder kl 19:00 den {f['datum']} – {status} | "
-               f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
-               f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, "
-               f"Molnighet: {f['tcc']}/8")
+vind_riktning = vind_pil(f['wd'])
+msg = (f"Väder kl 19:00 den {f['datum']} – {status} | "
+       f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {vind_riktning}, Byar: {f['gust']} m/s, "
+       f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km, "
+       f"Molnighet: {f['tcc']}/8")
         print(msg)
 
 if __name__ == "__main__":
     main()
+
 
