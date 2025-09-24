@@ -21,14 +21,25 @@ def wind_direction_arrow(deg):
 
 # Regler för snorkling
 def snorkling_ok(f):
-    if f["t"] is None or f["ws"] is None or f["gust"] is None:
+    try:
+        # Våghöjd ignoreras om den är "?"
+        wvh_ok = True if f["wvh"] == "?" else float(f["wvh"]) < 1
+
+        return (
+            float(f["t"]) > 0 and
+            float(f["ws"]) < 5 and
+            float(f["gust"]) < 8 and
+            wvh_ok
+        )
+    except (TypeError, ValueError):
+        # Om någon parameter är ogiltig
         return False
 
-    # Om wvh saknas, låtsas att den är "snorkelvänlig"
-    wvh_ok = True if f["wvh"] is None else f["wvh"] < 1
+# Hjälpfunktion som ersätter None med "?"
+def safe_get(params, key):
+    value = params.get(key)
+    return value if value is not None else "?"
 
-    return f["t"] > 0 and f["ws"] < 5 and f["gust"] < 8 and wvh_ok
-    
 def main():
     data = hamta_vader()
     tz = pytz.timezone("Europe/Stockholm")
@@ -42,23 +53,22 @@ def main():
         ).astimezone(tz)
 
         if valid_time.hour == 19 and len(prognoser) < 3:
-            # Hämta parametrar
+            # Hämta parametrar och ersätt None med "?"
             params = {p["name"]: p["values"][0] for p in t["parameters"]}
             prognoser.append({
                 "datum": valid_time.strftime("%Y-%m-%d"),
-                "t": params.get("t"),
-                "ws": params.get("ws"),
-                "gust": params.get("gust"),
-                "r": params.get("r"),
-                "wvh": params.get("wvh"),
-                "vis": params.get("vis"),
-                "tcc_mean": params.get("tcc_mean"),
-                "wd": params.get("wd")
+                "t": safe_get(params, "t"),
+                "ws": safe_get(params, "ws"),
+                "gust": safe_get(params, "gust"),
+                "r": safe_get(params, "r"),
+                "wvh": safe_get(params, "wvh"),
+                "tcc_mean": safe_get(params, "tcc_mean"),
+                "wd": safe_get(params, "wd")
             })
 
     for f in prognoser:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
-        wind_arrow = wind_direction_arrow(f["wd"]) if f["wd"] is not None else "?"
+        wind_arrow = wind_direction_arrow(f["wd"]) if f["wd"] != "?" else "?"
         msg = (
             f"Väder kl 19:00 den {f['datum']} – {status} | "
             f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {wind_arrow}, Byar: {f['gust']} m/s, "
@@ -69,4 +79,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
