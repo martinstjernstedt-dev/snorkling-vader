@@ -22,4 +22,4 @@ jobs:
         run: pip install requests pytz
 
       - name: Run snorkling script
-        run: python snorkling_smhi.py
+        run: python SnorklingBraYR.py
