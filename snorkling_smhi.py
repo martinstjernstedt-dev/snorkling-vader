@@ -1,94 +1,66 @@
 import requests
-from datetime import datetime
+import datetime
 import pytz
 
-# Koordinater (Lysekil)
-LAT = 58.2746
-LON = 11.4350
-
-def hamta_vader():
-    url = f"https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/{LON}/lat/{LAT}/data.json"
+# Hämta väderdata från SMHI
+def get_smhi_forecast(lat, lon):
+    url = f"https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/{lon}/lat/{lat}/data.json"
     r = requests.get(url)
     r.raise_for_status()
     return r.json()
 
-def vind_pil(grader):
-    if grader is None:
+# Vindriktning → pil
+def wind_arrow(direction):
+    if direction is None:
         return "?"
-    grader = grader % 360  # säkerställ 0-359
-    if 337.5 <= grader or grader < 22.5:
-        return "↑"
-    elif 22.5 <= grader < 67.5:
-        return "↗"
-    elif 67.5 <= grader < 112.5:
-        return "→"
-    elif 112.5 <= grader < 157.5:
-        return "↘"
-    elif 157.5 <= grader < 202.5:
-        return "↓"
-    elif 202.5 <= grader < 247.5:
-        return "↙"
-    elif 247.5 <= grader < 292.5:
-        return "←"
-    elif 292.5 <= grader < 337.5:
-        return "↖"
+    arrows = ["↑ N", "↗ NE", "→ E", "↘ SE", "↓ S", "↙ SW", "← W", "↖ NW"]
+    idx = int((direction % 360) / 45)
+    return arrows[idx]
 
-def forecast_19(data, dagar=3):
-    """Hämtar forecast kl 19 svensk tid för kommande 'dagar'"""
-    stockholm = pytz.timezone("Europe/Stockholm")
-    forecasts = []
-
-    for ts in data["timeSeries"]:
-        utc_time = datetime.fromisoformat(ts["validTime"].replace("Z", "+00:00"))
-        lokal_tid = utc_time.astimezone(stockholm)
-
-        if lokal_tid.hour == 19:
-            params = {p["name"]: p["values"][0] for p in ts["parameters"]}
-            forecasts.append({
-                "datum": lokal_tid.date(),
-                "t": params.get("t"),           # Lufttemperatur
-                "ws": params.get("ws"),         # Vind
-                "gust": params.get("gust"),     # Vindbyar
-                "r": params.get("r"),           # Nederbörd
-                "wvh": params.get("wvh"),       # Våghöjd
-                "vis": params.get("vis"),       # Sikt
-                "tcc": params.get("tcc_mean")   # Molnighet
-            })
-
-        if len(forecasts) >= dagar:
-            break
-    return forecasts
-
+# Kolla om vädret är bra för snorkling
 def snorkling_ok(f):
-    """Bedömning baserat på t, ws, wvh och gust (vindbyar)"""
-    t = f["t"] or 0
-    ws = f["ws"] or 0
-    wvh = f["wvh"] or 0
-    gust = f["gust"] or 0  # Om värdet saknas, sätt 0
+    t = f["t"] if f["t"] is not None else -99
+    ws = f["ws"] if f["ws"] is not None else 99
+    wvh = f["wvh"] if f["wvh"] is not None else 99
+    gust = f["gust"] if f["gust"] is not None else 99
 
-    if t > 0 and ws < 5 and wvh < 1 and gust < 8:
-        return True
-    return False
+    return t > 0 and ws < 5 and wvh < 1 and gust < 8
 
 def main():
-    data = hamta_vader()
-    forecasts = forecast_19(data, dagar=3)
+    lat, lon = 58.25, 11.45  # Lysekil
+    tz = pytz.timezone("Europe/Stockholm")
+    data = get_smhi_forecast(lat, lon)
 
-    for f in forecasts:
+    forecast = []
+    for t in data["timeSeries"]:
+        valid_time = datetime.datetime.fromisoformat(t["validTime"]).astimezone(tz)
+        if valid_time.hour == 19:  # Bara kl 19:00
+            params = {p["name"]: p["values"][0] for p in t["parameters"]}
+            forecast.append({
+                "datum": valid_time.strftime("%Y-%m-%d"),
+                "time": valid_time.strftime("%H:%M"),
+                "t": params.get("t"),
+                "ws": params.get("ws"),
+                "wd": params.get("wd"),
+                "wvh": params.get("swh"),
+                "gust": params.get("gust"),
+                "cloud": params.get("tcc_mean"),
+            })
+
+    for f in forecast:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
         moln = f"{f['cloud']}% molnighet" if f['cloud'] is not None else "okänd molnighet"
         riktning = wind_arrow(f["wd"]) if f["wd"] is not None else "?"
-        
+
         msg = (
             f"Väder kl {f['time']} den {f['datum']} – {status}\n"
-            f"🌡 Temp: {f['t']}°C | 🌬 Vind: {f['ws']} m/s ({riktning}) | "
-            f"🌊 Våg: {f['wvh']} m | 💨 Byvind: {f['gust']} m/s | ☁ {moln}"
+            f"🌡 Temp: {f['t']}°C | "
+            f"🌬 Vind: {f['ws']} m/s ({riktning}) | "
+            f"🌊 Våg: {f['wvh']} m | "
+            f"💨 Byvind: {f['gust']} m/s | "
+            f"☁ {moln}"
         )
         print(msg)
 
 if __name__ == "__main__":
     main()
-
-
-
-
