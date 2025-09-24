@@ -2,7 +2,7 @@ import requests
 import datetime
 import pytz
 
-# Koordinater för Stockevik
+# Koordinater för Stockevik (för SMHI väder)
 LAT = 57.959961
 LON = 11.547085
 
@@ -13,9 +13,10 @@ def hamta_vader():
     r.raise_for_status()
     return r.json()
 
-# HaV badplatsdata
-def hamta_badplats():
-    url = f"https://badplatsen.havochvatten.se/badplatsen/api/detail?id=SE0A21484000000552"
+# HaV badplatsdata för Stockevik (endast en badplats)
+def hamta_stockevik():
+    # Exakt ID för Stockevik badplats
+    url = "https://badplatsen.havochvatten.se/badplatsen/api/detail?id=SE0A21484000000552"
     r = requests.get(url)
     r.raise_for_status()
     return r.json()
@@ -42,7 +43,7 @@ def main():
     tz = pytz.timezone("Europe/Stockholm")
 
     vader_data = hamta_vader()
-    bad_data = hamta_badplats()
+    bad_data = hamta_stockevik()  # Ett dict för Stockevik
 
     sst = safe_get(bad_data, "vattentemperatur")
     water_quality = safe_get(bad_data, "badvattenklass")
