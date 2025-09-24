@@ -1,25 +1,27 @@
-name: Snorkling Yr väderkoll
+name: Snorkling Prognos
 
 on:
   schedule:
-    - cron: "0 5 * * *"  # Kör varje dag 07:00 svensk tid
-  workflow_dispatch:     # Gör att man kan köra manuellt
+    - cron: '0 7 * * *'  # Kör varje dag kl 07:00
+  workflow_dispatch:
 
 jobs:
-  run-script:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Installera Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install requests pytz
+      - name: Installera requests och pytz
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pytz
 
-      - name: Run snorkling script
-        run: python snorklingBraYR.py
+      - name: Kör snorkling Yr
+        run: python snorklingYR.py
