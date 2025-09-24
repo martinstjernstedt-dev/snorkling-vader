@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime
+import pytz
 
 # Koordinater (Lysekil)
 LAT = 58.2746
@@ -11,26 +12,41 @@ def hamta_vader():
     r.raise_for_status()
     return r.json()
 
-def bra_for_snorkling(data):
-    forecast = data["timeSeries"][0]
-    params = {p["name"]: p["values"][0] for p in forecast["parameters"]}
+def forecast_19(data, dagar=3):
+    """Hämtar forecast kl 19 svensk tid för kommande 'dagar'"""
+    stockholm = pytz.timezone("Europe/Stockholm")
+    forecasts = []
 
-    temp = params["t"]          # °C
-    vind = params["ws"]         # m/s
-    moln = params["tcc_mean"]   # 0–8
+    for ts in data["timeSeries"]:
+        # SMHI tid är UTC
+        utc_time = datetime.fromisoformat(ts["validTime"].replace("Z", "+00:00"))
+        lokal_tid = utc_time.astimezone(stockholm)
 
-    ok = (temp > 15 and vind < 5 and moln < 6)
-    return ok, temp, vind, moln
+        if lokal_tid.hour == 19:
+            params = {p["name"]: p["values"][0] for p in ts["parameters"]}
+            forecasts.append({
+                "datum": lokal_tid.date(),
+                "t": params.get("t"),          # Lufttemperatur
+                "ws": params.get("ws"),        # Vind
+                "gust": params.get("gust"),    # Vindbyar
+                "r": params.get("r"),          # Nederbörd
+                "wvh": params.get("wvh"),      # Våghöjd
+                "vis": params.get("vis")       # Sikt
+            })
+
+        if len(forecasts) >= dagar:
+            break
+    return forecasts
 
 def main():
     data = hamta_vader()
-    ok, temp, vind, moln = bra_for_snorkling(data)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    forecasts = forecast_19(data, dagar=3)
 
-    if ok:
-        print(f"✅ {now}: Bra snorkeldag! Temp {temp}°C, Vind {vind} m/s, Moln {moln}/8")
-    else:
-        print(f"❌ {now}: Inte optimalt. Temp {temp}°C, Vind {vind} m/s, Moln {moln}/8")
+    for f in forecasts:
+        msg = (f"Väder kl 19:00 den {f['datum']} – "
+               f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
+               f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km")
+        print(msg)
 
 if __name__ == "__main__":
     main()
