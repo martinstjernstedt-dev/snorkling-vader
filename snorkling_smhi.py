@@ -49,10 +49,11 @@ def main():
 
     for f in forecasts:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
-        msg = (f"Väder kl 19:00 den {f['datum']} – "
-               {status} | f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
-               f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km")
+       msg = (f"Väder kl 19:00 den {f['datum']} – {status} | "
+       f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
+       f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km")
         print(msg)
 
 if __name__ == "__main__":
     main()
+
