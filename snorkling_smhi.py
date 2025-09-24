@@ -25,12 +25,13 @@ def forecast_19(data, dagar=3):
             params = {p["name"]: p["values"][0] for p in ts["parameters"]}
             forecasts.append({
                 "datum": lokal_tid.date(),
-                "t": params.get("t"),          # Lufttemperatur
-                "ws": params.get("ws"),        # Vind
-                "gust": params.get("gust"),    # Vindbyar
-                "r": params.get("r"),          # Nederbörd
-                "wvh": params.get("wvh"),      # Våghöjd
-                "vis": params.get("vis")       # Sikt
+                "t": params.get("t"),           # Lufttemperatur
+                "ws": params.get("ws"),         # Vind
+                "gust": params.get("gust"),     # Vindbyar
+                "r": params.get("r"),           # Nederbörd
+                "wvh": params.get("wvh"),       # Våghöjd
+                "vis": params.get("vis"),       # Sikt
+                "tcc": params.get("tcc_mean")   # Molnighet
             })
 
         if len(forecasts) >= dagar:
@@ -44,7 +45,7 @@ def snorkling_ok(f):
     wvh = f["wvh"] or 0
     gust = f["gust"] or 0  # Om värdet saknas, sätt 0
 
-    if t > 0 and ws < 5 and wvh < 1 and gust < 8:
+    if t > 15 and ws < 5 and wvh < 1 and gust < 8:
         return True
     return False
 
@@ -56,9 +57,9 @@ def main():
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
         msg = (f"Väder kl 19:00 den {f['datum']} – {status} | "
                f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
-               f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km")
+               f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, "
+               f"Molnighet: {f['tcc']}/8")
         print(msg)
 
 if __name__ == "__main__":
     main()
-
