@@ -39,7 +39,7 @@ def forecast_19(data, dagar=3):
 
 def snorkling_ok(f):
     """Bedömning baserat på t, ws och wvh"""
-    if f["t"] > 15 and f["ws"] < 5 and f["wvh"] < 1:
+    if f["t"] > 0 and f["ws"] < 5 and f["wvh"] < 1 and f["gust"] < 8:
         return True
     return False
 
@@ -56,5 +56,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
