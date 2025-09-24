@@ -45,7 +45,7 @@ def snorkling_ok(f):
     wvh = f["wvh"] or 0
     gust = f["gust"] or 0  # Om värdet saknas, sätt 0
 
-    if t > 15 and ws < 5 and wvh < 1 and gust < 8:
+    if t > 0 and ws < 5 and wvh < 1 and gust < 8:
         return True
     return False
 
@@ -63,3 +63,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
