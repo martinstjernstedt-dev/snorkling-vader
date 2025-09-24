@@ -21,10 +21,14 @@ def wind_direction_arrow(deg):
 
 # Regler för snorkling
 def snorkling_ok(f):
-    if f["t"] is None or f["ws"] is None or f["wvh"] is None or f["gust"] is None:
+    if f["t"] is None or f["ws"] is None or f["gust"] is None:
         return False
-    return f["t"] > 0 and f["ws"] < 5 and f["wvh"] < 1 and f["gust"] < 8
 
+    # Om wvh saknas, låtsas att den är "snorkelvänlig"
+    wvh_ok = True if f["wvh"] is None else f["wvh"] < 1
+
+    return f["t"] > 0 and f["ws"] < 5 and f["gust"] < 8 and wvh_ok
+    
 def main():
     data = hamta_vader()
     tz = pytz.timezone("Europe/Stockholm")
@@ -59,9 +63,10 @@ def main():
             f"Väder kl 19:00 den {f['datum']} – {status} | "
             f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {wind_arrow}, Byar: {f['gust']} m/s, "
             f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, "
-            f"Molnighet: {f['tcc_mean']} oktas"
+            f"Molnighet: {f['tcc_mean']} /8"
         )
         print(msg)
 
 if __name__ == "__main__":
     main()
+
