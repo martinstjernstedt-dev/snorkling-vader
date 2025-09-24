@@ -18,7 +18,6 @@ def forecast_19(data, dagar=3):
     forecasts = []
 
     for ts in data["timeSeries"]:
-        # SMHI tid är UTC
         utc_time = datetime.fromisoformat(ts["validTime"].replace("Z", "+00:00"))
         lokal_tid = utc_time.astimezone(stockholm)
 
@@ -38,13 +37,20 @@ def forecast_19(data, dagar=3):
             break
     return forecasts
 
+def snorkling_ok(f):
+    """Bedömning baserat på t, ws och wvh"""
+    if f["t"] > 15 and f["ws"] < 5 and f["wvh"] < 1:
+        return True
+    return False
+
 def main():
     data = hamta_vader()
     forecasts = forecast_19(data, dagar=3)
 
     for f in forecasts:
+        status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
         msg = (f"Väder kl 19:00 den {f['datum']} – "
-               f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
+               {status} | f"Temp: {f['t']}°C, Vind: {f['ws']} m/s, Byar: {f['gust']} m/s, "
                f"Nederbörd: {f['r']} mm, Våghöjd: {f['wvh']} m, Sikt: {f['vis']/1000:.1f} km")
         print(msg)
 
