@@ -74,7 +74,7 @@ def main():
     data = hamta_vader()
     forecasts = forecast_19(data, dagar=3)
 
-    for f in forecast:
+    for f in forecasts:
         status = "✅ Bra för snorkling" if snorkling_ok(f) else "❌ Inte optimalt"
         moln = f"{f['cloud']}% molnighet" if f['cloud'] is not None else "okänd molnighet"
         riktning = wind_arrow(f["wd"]) if f["wd"] is not None else "?"
@@ -88,6 +88,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
