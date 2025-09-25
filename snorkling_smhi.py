@@ -1,18 +1,3 @@
-import requests
-import datetime
-import pytz
-
-# Koordinater för Stockevik (SMHI)
-LAT = 57.959961
-LON = 11.547085
-
-# SMHI väderdata
-def hamta_vader():
-    url = f"https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/{LON}/lat/{LAT}/data.json"
-    r = requests.get(url)
-    r.raise_for_status()
-    return r.json()
-
 # HaV badplatsdata för Stockevik
 def hamta_stockevik():
     url = "https://badplatsen.havochvatten.se/badplatsen/api/detail?id=SE0A21484000000552"
@@ -20,33 +5,23 @@ def hamta_stockevik():
     r.raise_for_status()
     return r.json()
 
-# Vindriktning som pil
-def wind_direction_arrow(deg):
-    arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
-    try:
-        ix = round(float(deg) / 45) % 8
-        return arrows[ix]
-    except (TypeError, ValueError):
-        return "?"
-
-# Snorklingregler
-def snorkling_ok(f):
-    try:
-        return float(f["t"]) > 0 and float(f["ws"]) < 5 and float(f["gust"]) < 8
-    except (TypeError, ValueError):
-        return False
-
 def main():
     tz = pytz.timezone("Europe/Stockholm")
 
     vader_data = hamta_vader()
     bad_data = hamta_stockevik()
 
+    # bad_data är en lista -> ta första elementet
+    if isinstance(bad_data, list) and bad_data:
+        bad_data = bad_data[0]
+
     # Plocka vattentemperatur från första observationen (om finns)
     if "observations" in bad_data and bad_data["observations"]:
         sst = bad_data["observations"][0].get("vattentemperatur", "?")
+        sst_tid = bad_data["observations"][0].get("observationstid", "")
     else:
         sst = "?"
+        sst_tid = ""
 
     # Plocka vattenkvalitet
     water_quality = bad_data.get("properties", {}).get("badvattenklass", "?")
@@ -66,6 +41,7 @@ def main():
                 "tcc_mean": params.get("tcc_mean", "?"),
                 "wd": params.get("wd", "?"),
                 "sst": sst,
+                "sst_tid": sst_tid,
                 "water_quality": water_quality
             })
 
@@ -76,9 +52,7 @@ def main():
             f"Väder kl 19:00 den {f['datum']} – {status}\n"
             f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {wind_arrow}, Byar: {f['gust']} m/s\n"
             f"Nederbörd: {f['r']} mm, Molnighet: {f['tcc_mean']} /8\n"
-            f"Havstemperatur (Stockevik): {f['sst']}°C, Vattenkvalitet: {f['water_quality']}"
+            f"Havstemperatur (Stockevik): {f['sst']}°C (mätt {f['sst_tid']}), "
+            f"Vattenkvalitet: {f['water_quality']}"
         )
         print(msg)
-
-if __name__ == "__main__":
-    main()
