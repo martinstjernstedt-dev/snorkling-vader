@@ -36,31 +36,20 @@ def snorkling_ok(f):
     except (TypeError, ValueError):
         return False
 
-# Robust hämtning av fält från HaV-data
-def safe_get_badplats(data, key):
-    if key in data:
-        return data[key]
-    if "properties" in data and key in data["properties"]:
-        return data["properties"][key]
-    if "observations" in data:
-        for obs in data["observations"]:
-            if key in obs:
-                return obs[key]
-    return "?"
-
-# Hjälpfunktion för SMHI-parametrar
-def safe_get(params, key):
-    value = params.get(key)
-    return value if value is not None else "?"
-
 def main():
     tz = pytz.timezone("Europe/Stockholm")
 
     vader_data = hamta_vader()
     bad_data = hamta_stockevik()
 
-    sst = safe_get_badplats(bad_data, "vattentemperatur")
-    water_quality = safe_get_badplats(bad_data, "badvattenklass")
+    # Plocka vattentemperatur från första observationen (om finns)
+    if "observations" in bad_data and bad_data["observations"]:
+        sst = bad_data["observations"][0].get("vattentemperatur", "?")
+    else:
+        sst = "?"
+
+    # Plocka vattenkvalitet
+    water_quality = bad_data.get("properties", {}).get("badvattenklass", "?")
 
     prognoser = []
 
@@ -70,12 +59,12 @@ def main():
             params = {p["name"]: p["values"][0] for p in t["parameters"]}
             prognoser.append({
                 "datum": valid_time.strftime("%Y-%m-%d"),
-                "t": safe_get(params, "t"),
-                "ws": safe_get(params, "ws"),
-                "gust": safe_get(params, "gust"),
-                "r": safe_get(params, "r"),
-                "tcc_mean": safe_get(params, "tcc_mean"),
-                "wd": safe_get(params, "wd"),
+                "t": params.get("t", "?"),
+                "ws": params.get("ws", "?"),
+                "gust": params.get("gust", "?"),
+                "r": params.get("r", "?"),
+                "tcc_mean": params.get("tcc_mean", "?"),
+                "wd": params.get("wd", "?"),
                 "sst": sst,
                 "water_quality": water_quality
             })
@@ -87,7 +76,7 @@ def main():
             f"Väder kl 19:00 den {f['datum']} – {status}\n"
             f"Temp: {f['t']}°C, Vind: {f['ws']} m/s {wind_arrow}, Byar: {f['gust']} m/s\n"
             f"Nederbörd: {f['r']} mm, Molnighet: {f['tcc_mean']} /8\n"
-            f"Havstemperatur: {f['sst']}°C, Vattenkvalitet: {f['water_quality']}"
+            f"Havstemperatur (Stockevik): {f['sst']}°C, Vattenkvalitet: {f['water_quality']}"
         )
         print(msg)
 
