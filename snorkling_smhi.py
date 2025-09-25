@@ -19,8 +19,12 @@ def hamta_stockevik():
     r = requests.get(url)
     r.raise_for_status()
     data = r.json()
-    # filtrera fram Stockevik
-    stockevik = [f for f in data if "Stockevik" in f.get("name", "")]
+
+    features = data.get("features", [])
+    stockevik = [
+        f for f in features
+        if "Stockevik" in f.get("properties", {}).get("NAMN", "")
+    ]
     return stockevik
 
 # Vindriktning som pil
@@ -35,7 +39,7 @@ def wind_direction_arrow(deg):
     ix = round(deg / 45) % 8
     return arrows[ix]
 
-# Snorklingregler (ignorera våghöjd om den saknas)
+# Snorklingregler
 def snorkling_ok(f):
     try:
         return (
@@ -54,27 +58,23 @@ def main():
     print("✅ Hämtade väderdata från SMHI")
 
     # Hämta badplatsdata
-    bad_data = hamta_stockevik()
-    print("✅ Hämtade badplatsdata från HaV:", len(bad_data))
+    bad_data_list = hamta_stockevik()
+    print("✅ Hämtade badplatsdata från HaV:", len(bad_data_list))
 
-    # Plocka ut info från Stockevik
-    if isinstance(bad_data, list) and bad_data:
-        bad_data = bad_data[0]
-        print("Badplats:", bad_data.get("name", "?"))
-    else:
-        bad_data = {}
-
-    if "observations" in bad_data and bad_data["observations"]:
-        sst = bad_data["observations"][0].get("vattentemperatur", "?")
-        sst_tid = bad_data["observations"][0].get("observationstid", "")
+    if bad_data_list:
+        bad_data = bad_data_list[0]
+        props = bad_data.get("properties", {})
+        sst = props.get("TEMPVATTEN", "?")
+        sst_tid = props.get("DATUM", "?")
+        water_quality = props.get("BADVATTENKLASS", "?")
+        print("Badplats:", props.get("NAMN", "?"))
     else:
         sst = "?"
-        sst_tid = ""
-        print("⚠️ Ingen vattentemperatur hittades för Stockevik")
+        sst_tid = "?"
+        water_quality = "?"
+        print("⚠️ Ingen Stockevik-data hittades")
 
-    water_quality = bad_data.get("properties", {}).get("badvattenklass", "?")
-
-    # Bygg prognoslista
+    # Prognoser 3 dagar kl 19
     prognoser = []
     for t in vader_data.get("timeSeries", []):
         valid_time = datetime.datetime.fromisoformat(
@@ -95,7 +95,6 @@ def main():
                 "water_quality": water_quality
             })
 
-    # Utskrift
     if not prognoser:
         print("⚠️ Hittade inga prognoser kl 19!")
     else:
